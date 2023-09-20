@@ -13,6 +13,13 @@
             "type": "keyword",
             "name": "Flog Tools",
             "default_value": "flog"
+        },
+        {
+            "id": "flog_front_directory",
+            "type": "input",
+            "name": "Front Directory",
+            "description": "Enter frontend directory.",
+            "default_value": ""
         }
     ]
 }
