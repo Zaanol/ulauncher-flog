@@ -76,6 +76,11 @@ class FLOGToolsExtension(Extension):
             "Comando para gerar key tools Financeiro",
             CopyToClipboardAction("flog key")))
 
+        suggestions.append(FLOGToolsExtension.createItem(
+                    "Sugestão: Tools Front",
+                    "Comando para listar as ferramentas de front",
+                    CopyToClipboardAction("flog front")))
+
         return suggestions
 
     def createItem(name, description, on_enter):
