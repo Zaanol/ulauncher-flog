@@ -42,14 +42,27 @@ class FLOGToolsExtension(Extension):
         jiraWorklogCsv = FLOGToolsExtension.getJiraWorklogCsvPath(extension)
         jiraConfig = FLOGToolsExtension.getJiraConfig(extension)
 
-        with open(jiraWorklogCsv, newline='') as theFile:
-            reader = csv.DictReader(theFile)
+        with open(jiraWorklogCsv, newline='') as csvFile:
+            reader = csv.DictReader(csvFile)
+            rows = list(reader)
 
-            for worklog in reader:
-                FLOGToolsExtension.jira_import_worklog(jiraConfig, worklog)
+            for worklog in rows:
+                if FLOGToolsExtension.jira_import_worklog(jiraConfig, worklog) == 0:
+                    worklog['pointed'] = 'true'
+
+        with open(jiraWorklogCsv, mode='w', newline='') as csvfile:
+            fieldnames = reader.fieldnames
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+            writer.writeheader()
+            writer.writerows(rows)
+
 
     def jira_import_worklog(jiraConfig, worklog):
         print(worklog)
+
+        if worklog['pointed'] == 'true':
+            return 1
 
         data = {
             "originTaskId": worklog['issue'],
@@ -61,7 +74,7 @@ class FLOGToolsExtension(Extension):
 
         json_data = json.dumps(data)
 
-        os.system(
+        return os.system(
             f"curl --request POST "
             f"--url '{jiraConfig['url']}' "
             f"--user '{jiraConfig['fullUser']}' "
@@ -129,7 +142,7 @@ class FLOGToolsExtension(Extension):
         return suggestions
 
     def createItem(name, description, on_enter):
-        return ExtensionResultItem(icon='images/icon.ico',
+        return ExtensionResultItem(icon='sources/images/icon.ico',
                                   name=name,
                                   description=description,
                                   highlightable=False,

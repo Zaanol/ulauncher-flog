@@ -3,7 +3,7 @@
     "name": "FLOG Tools",
     "description": "Tools Financeiro Logístico",
     "developer_name": "Zanol",
-    "icon": "images/icon.ico",
+    "icon": "sources/images/icon.ico",
     "options": {
         "query_debounce": 0.05
     },
