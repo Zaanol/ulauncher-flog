@@ -20,6 +20,41 @@
             "name": "Front Directory",
             "description": "Enter frontend directory.",
             "default_value": ""
+        },
+        {
+            "id": "flog_worklog_directory",
+            "type": "input",
+            "name": "Jira Worklog csv Directory",
+            "description": "Enter worklog csv directory.",
+            "default_value": ""
+        },
+        {
+            "id": "flog_jira_url",
+            "type": "input",
+            "name": "Jira URL",
+            "description": "Enter Jira URL.",
+            "default_value": ""
+        },
+        {
+            "id": "flog_jira_user",
+            "type": "input",
+            "name": "Jira User",
+            "description": "Enter Jira User.",
+            "default_value": ""
+        },
+        {
+            "id": "flog_jira_password",
+            "type": "input",
+            "name": "Jira Password",
+            "description": "Enter Jira Password.",
+            "default_value": ""
+        },
+        {
+            "id": "flog_jira_worker",
+            "type": "input",
+            "name": "Jira Worker",
+            "description": "Enter Jira Worker.",
+            "default_value": ""
         }
     ]
 }

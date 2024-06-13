@@ -1,6 +1,10 @@
 import logging
 import base64
 import os
+import csv
+import requests
+import json
+from requests.auth import HTTPBasicAuth
 from datetime import datetime
 from ulauncher.api.client.Extension import Extension
 from ulauncher.api.client.EventListener import EventListener
@@ -29,6 +33,42 @@ class FLOGToolsExtension(Extension):
         base64_string = base64_bytes.decode("ascii")
 
         return FLOGToolsExtension.createItem("Tools Key", base64_string, CopyToClipboardAction(base64_string))
+
+    def option_jira_import_worklogs():
+        data = {"command": "jira_import_worklogs"}
+        return FLOGToolsExtension.createItem("Tools Jira Import Worklogs", "Jira Import Worklogs", ExtensionCustomAction(data, keep_app_open=True))
+
+    def jira_import_worklogs(extension):
+        jiraWorklogCsv = FLOGToolsExtension.getJiraWorklogCsvPath(extension)
+        jiraConfig = FLOGToolsExtension.getJiraConfig(extension)
+
+        with open(jiraWorklogCsv, newline='') as theFile:
+            reader = csv.DictReader(theFile)
+
+            for worklog in reader:
+                FLOGToolsExtension.jira_import_worklog(jiraConfig, worklog)
+
+    def jira_import_worklog(jiraConfig, worklog):
+        print(worklog)
+
+        data = {
+            "originTaskId": worklog['issue'],
+            "comment": worklog['comment'],
+            "started": FLOGToolsExtension.formatDate(worklog['date']),
+            "timeSpentSeconds": FLOGToolsExtension.hourToSeconds(worklog['hours']),
+            "worker": jiraConfig['worker']
+        }
+
+        json_data = json.dumps(data)
+
+        os.system(
+            f"curl --request POST "
+            f"--url '{jiraConfig['url']}' "
+            f"--user '{jiraConfig['fullUser']}' "
+            f"--header 'Accept: application/json' "
+            f"--header 'Content-Type: application/json' "
+            f"--data '{json_data}'"
+        )
 
     def all_options_front():
         front_options = []
@@ -77,9 +117,14 @@ class FLOGToolsExtension(Extension):
             CopyToClipboardAction("flog key")))
 
         suggestions.append(FLOGToolsExtension.createItem(
-                    "Sugestão: Tools Front",
-                    "Comando para listar as ferramentas de front",
-                    CopyToClipboardAction("flog front")))
+            "Sugestão: Jira import worklogs",
+            "Comando para importar apontamentos de lista CSV para o Jira",
+            CopyToClipboardAction("flog jira import worklogs")))
+
+        suggestions.append(FLOGToolsExtension.createItem(
+            "Sugestão: Tools Front",
+            "Comando para listar as ferramentas de front",
+            CopyToClipboardAction("flog front")))
 
         return suggestions
 
@@ -91,10 +136,49 @@ class FLOGToolsExtension(Extension):
                                   on_enter=on_enter)
 
     def executeBash(command):
-        return os.system("gnome-terminal -e 'bash -c \"" + command + "\" '")
+        print(f"gnome-terminal -- bash -c \"{command}; bash\"")
+        return os.system(f"gnome-terminal -- bash -c \"{command}; bash\"")
 
     def getFrontPath(extension):
-        return extension.preferences.get('flog_front_directory')
+        return FLOGToolsExtension.getPreference(extension, 'flog_front_directory')
+
+    def getJiraWorklogCsvPath(extension):
+        return FLOGToolsExtension.getPreference(extension, 'flog_worklog_directory')
+
+    def getJiraUrl(extension):
+        return FLOGToolsExtension.getPreference(extension, 'flog_jira_url')
+
+    def getJiraUser(extension):
+        return FLOGToolsExtension.getPreference(extension, 'flog_jira_user')
+
+    def getJiraPassowrd(extension):
+        return FLOGToolsExtension.getPreference(extension, 'flog_jira_password')
+
+    def getJiraWorker(extension):
+        return FLOGToolsExtension.getPreference(extension, 'flog_jira_worker')
+
+    def getPreference(extension, preference_id):
+        return extension.preferences.get(preference_id)
+
+    def getJiraConfig(extension):
+        jiraUrl = FLOGToolsExtension.getJiraUrl(extension)
+
+        jiraUser = FLOGToolsExtension.getJiraUser(extension)
+        jiraPassword = FLOGToolsExtension.getJiraPassowrd(extension)
+
+        return {
+            "url": jiraUrl + "/rest/tempo-timesheets/4/worklogs/",
+            "fullUser": jiraUser + ':' + jiraPassword,
+            "worker": FLOGToolsExtension.getJiraWorker(extension)
+        }
+
+    def hourToSeconds(hour):
+        return int(float(hour) * 3600)
+
+    def formatDate(date):
+        date_obj = datetime.strptime(date, '%Y-%m-%d')
+
+        return date_obj.strftime('%Y-%m-%dT12:00:00.000')
 
 class KeywordQueryEventListener(EventListener):
 
@@ -105,6 +189,8 @@ class KeywordQueryEventListener(EventListener):
 
         if query == "key":
             items.append(FLOGToolsExtension.generate_key())
+        elif query == "jira import worklogs":
+            items.append(FLOGToolsExtension.option_jira_import_worklogs())
         elif query == "front":
             items.extend(FLOGToolsExtension.all_options_front())
         elif query == "front start":
@@ -125,7 +211,9 @@ class ItemEnterEventListener(EventListener):
     def on_event(self, event, extension):
         command = event.get_data()["command"]
 
-        if command == "front_start":
+        if command == "jira_import_worklogs":
+            FLOGToolsExtension.jira_import_worklogs(extension)
+        elif command == "front_start":
             FLOGToolsExtension.start_front(extension)
         elif command == "front_build":
             FLOGToolsExtension.build_front(extension)
