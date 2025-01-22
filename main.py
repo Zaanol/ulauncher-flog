@@ -47,8 +47,11 @@ class FLOGToolsExtension(Extension):
             rows = list(reader)
 
             for worklog in rows:
-                if FLOGToolsExtension.jira_import_worklog(jiraConfig, worklog) == 0:
+                response = FLOGToolsExtension.jira_import_worklog(jiraConfig, worklog)
+                if response.status_code == 200 or response.status_code == 201:
                     worklog['pointed'] = 'true'
+                else:
+                    print(f"Failed to import worklog: {response.status_code} {response.text}")
 
         with open(jiraWorklogCsv, mode='w', newline='') as csvfile:
             fieldnames = reader.fieldnames
@@ -74,14 +77,22 @@ class FLOGToolsExtension(Extension):
 
         json_data = json.dumps(data)
 
-        return os.system(
-            f"curl --request POST "
-            f"--url '{jiraConfig['url']}' "
-            f"--user '{jiraConfig['fullUser']}' "
-            f"--header 'Accept: application/json' "
-            f"--header 'Content-Type: application/json' "
-            f"--data '{json_data}'"
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "Origin": jiraConfig['urlBase'],
+            "Referer": jiraConfig['referBase'] + worklog['issue']
+        }
+
+        response = requests.post(
+            url=jiraConfig['url'],
+            auth=(jiraConfig['user'], jiraConfig['password']),
+            headers=headers,
+            data=json_data
         )
+
+        return response
 
     def all_options_front():
         front_options = []
@@ -180,9 +191,12 @@ class FLOGToolsExtension(Extension):
         jiraPassword = FLOGToolsExtension.getJiraPassowrd(extension)
 
         return {
+            "urlBase": jiraUrl,
             "url": jiraUrl + "/rest/tempo-timesheets/4/worklogs/",
-            "fullUser": jiraUser + ':' + jiraPassword,
-            "worker": FLOGToolsExtension.getJiraWorker(extension)
+            "user": jiraUser,
+            "password": jiraPassword,
+            "worker": FLOGToolsExtension.getJiraWorker(extension),
+            "referBase": jiraUrl + "/browse/"
         }
 
     def hourToSeconds(hour):
