@@ -48,7 +48,10 @@ class FLOGToolsExtension(Extension):
 
             for worklog in rows:
                 response = FLOGToolsExtension.jira_import_worklog(jiraConfig, worklog)
-                if response.status_code == 200 or response.status_code == 201:
+
+                if response == 1:
+                    print(f"Worklog already pointed: {worklog['issue']}")
+                elif response.status_code == 200 or response.status_code == 201:
                     worklog['pointed'] = 'true'
                 else:
                     print(f"Failed to import worklog: {response.status_code} {response.text}")
